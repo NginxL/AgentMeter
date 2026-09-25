@@ -136,25 +136,17 @@ struct SubscriptionEditorView: View {
             if !isExisting {
                 field(model.text("读取方式", "Usage tracking")) {
                     Picker(model.text("读取方式", "Usage tracking"), selection: $draft.provider) {
-                        Text(model.text("任意工具 · 手动管理", "Any tool · Manual")).tag(ProviderKind.manual)
-                        if !model.subscriptions.contains(where: { $0.provider == .codex }) {
-                            Text("Codex · " + model.text("自动读取", "Automatic")).tag(ProviderKind.codex)
-                        }
-                        if !model.subscriptions.contains(where: { $0.provider == .claude }) {
-                            Text("Claude · " + model.text("自动读取", "Automatic")).tag(ProviderKind.claude)
-                        }
-                        if !model.subscriptions.contains(where: { $0.provider == .trae }) {
-                            Text("TRAE SOLO CN · " + model.text("自动读取（实验性）", "Automatic (experimental)")).tag(ProviderKind.trae)
-                        }
-                        if !model.subscriptions.contains(where: { $0.provider == .doubao }) {
-                            Text(model.text("豆包工作 · 手动记录", "Doubao Work · Manual")).tag(ProviderKind.doubao)
+                        ForEach(availableProviders, id: \.self) { provider in
+                            Text(provider == .manual
+                                 ? model.text("自定义工具 · 手动记录", "Custom tool · Manual")
+                                 : provider.name + " · " + model.text("自动读取", "Automatic"))
+                                .tag(provider)
                         }
                     }.labelsHidden()
                     .onChange(of: draft.provider) { old, new in
-                        if draft.name.isEmpty || draft.name == old.name || (old == .doubao && draft.name == "豆包工作") {
-                            draft.name = new == .manual ? "" : (new == .doubao ? "豆包工作" : new.name)
+                        if draft.name.isEmpty || draft.name == old.name {
+                            draft.name = new == .manual ? "" : new.name
                         }
-                        if new == .trae || new == .doubao { draft.currency = "CNY" }
                     }
                 }
             }
@@ -181,10 +173,13 @@ struct SubscriptionEditorView: View {
         if draft.usesManualUsage {
             return model.text("手动记录：额度不会自动刷新。套餐、费用及续费日期也由你维护。", "Manual records do not refresh automatically. Plan, cost, and billing dates are also maintained by you.")
         }
-        if draft.provider == .trae {
-            return model.text("实验性读取 TRAE SOLO CN 个人额度；企业额度暂不支持。也可切换为手动记录。", "Experimental access to TRAE SOLO CN personal usage. Enterprise quotas are not supported; manual tracking is available.")
-        }
         return model.text("额度从本机的官方登录读取。套餐、费用及账期由你手动维护。", "Usage comes from your official local login. Plan, cost, and billing details are maintained by you.")
+    }
+
+    private var availableProviders: [ProviderKind] {
+        ProviderKind.selectableCases.filter { provider in
+            provider == .manual || !model.subscriptions.contains(where: { $0.provider == provider })
+        }
     }
 
     private var billingFields: some View {

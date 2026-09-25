@@ -36,18 +36,23 @@ final class AppModel: ObservableObject {
     init(demo: Bool = false, defaults: UserDefaults = .standard,
          providers: [ProviderKind: any UsageProvider]? = nil, startTimer: Bool = true) {
         self.defaults = defaults
-        self.providers = providers ?? [.codex: CodexProvider(), .claude: ClaudeProvider(), .trae: TraeProvider()]
+        self.providers = (providers ?? [.codex: CodexProvider(), .claude: ClaudeProvider()])
+            .filter { $0.key.supportsAutomaticUsage }
         language = defaults.string(forKey: "language") ?? "zh"
         autoRefresh = defaults.object(forKey: "autoRefresh") as? Bool ?? true
+        var needsMigration = false
         if let data = defaults.data(forKey: "subscriptions"),
            let stored = try? JSONDecoder().decode([Subscription].self, from: data) {
-            subscriptions = stored
+            subscriptions = stored.filter { !$0.provider.isRetired }
+            needsMigration = subscriptions.count != stored.count
         } else { subscriptions = Subscription.defaults }
         if let data = defaults.data(forKey: "snapshots"),
            let stored = try? JSONDecoder().decode([UUID: UsageSnapshot].self, from: data) {
             let allowed = Set(subscriptions.map(\.id))
-            snapshots = stored.filter { allowed.contains($0.key) }
+            snapshots = stored.filter { allowed.contains($0.key) && !$0.value.provider.isRetired }
+            needsMigration = needsMigration || snapshots.count != stored.count
         }
+        if needsMigration { persist() }
         if demo { setDemoMode(true) }
         if startTimer {
             timer = Timer.publish(every: MeterPolicy.refreshInterval, on: .main, in: .common)
@@ -60,12 +65,7 @@ final class AppModel: ObservableObject {
 
     func text(_ zh: String, _ en: String) -> String { language == "en" ? en : zh }
 
-    func displayName(_ item: Subscription) -> String {
-        if item.provider == .doubao && ["豆包工作", "Doubao Work"].contains(item.name) {
-            return text("豆包工作", "Doubao Work")
-        }
-        return item.name
-    }
+    func displayName(_ item: Subscription) -> String { item.name }
 
     func snapshot(for item: Subscription) -> UsageSnapshot? {
         guard item.usesManualUsage else { return snapshots[item.id] }
@@ -115,7 +115,7 @@ final class AppModel: ObservableObject {
                   subscriptions.contains(where: { $0.id == id && $0.enabled && !$0.usesManualUsage }) else { return }
             if let failure = error as? MeterFailure {
                 switch failure {
-                case .notSignedIn, .expired, .unsupportedAccount:
+                case .notSignedIn, .expired:
                     snapshots[id] = nil
                     validatedSnapshotIDs.remove(id)
                 default: break
@@ -129,6 +129,7 @@ final class AppModel: ObservableObject {
     }
 
     func save(_ subscription: Subscription) {
+        guard !subscription.provider.isRetired else { return }
         var valid = subscription
         valid.name = valid.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !valid.name.isEmpty else { return }
@@ -172,15 +173,12 @@ final class AppModel: ObservableObject {
             let now = Date()
             let codex = Subscription(provider: .codex, name: "Codex", plan: "Plus", renewalDate: now.addingTimeInterval(9 * 86400), monthlyCost: 20)
             let claude = Subscription(provider: .claude, name: "Claude", plan: "Pro", renewalDate: now.addingTimeInterval(4 * 86400), monthlyCost: 20)
-            let cursor = Subscription(provider: .manual, name: "Cursor", plan: "Pro", renewalDate: now.addingTimeInterval(18 * 86400), monthlyCost: 20, notes: "手动登记的订阅示例 · Manually tracked example")
-            let trae = Subscription(provider: .trae, name: "TRAE SOLO CN", plan: "Example", currency: "CNY")
-            let doubao = Subscription(provider: .doubao, name: "豆包工作", plan: "Example", currency: "CNY", manualUsage: ManualUsage(windows: [
+            let cursor = Subscription(provider: .manual, name: "Cursor", plan: "Pro", renewalDate: now.addingTimeInterval(18 * 86400), monthlyCost: 20, notes: "手动登记的订阅示例 · Manually tracked example", manualUsage: ManualUsage(windows: [
                 QuotaWindow(id: "manual.current", title: "Current period", usedPercent: 24, resetsAt: now.addingTimeInterval(2 * 3600)),
                 QuotaWindow(id: "manual.weekly", title: "Weekly", usedPercent: 38, resetsAt: now.addingTimeInterval(4 * 86400))
             ], recordedAt: now))
-            subscriptions = [codex, claude, trae, doubao, cursor]
+            subscriptions = [codex, claude, cursor]
             snapshots = [
-                trae.id: UsageSnapshot(provider: .trae, plan: "Example", windows: [QuotaWindow(id: "trae.credits", title: "Credits", usedPercent: 27)], source: "Demo / 演示数据"),
                 codex.id: UsageSnapshot(provider: .codex, plan: "Plus", windows: [
                     QuotaWindow(id: "codex.primary", title: "5 hours", usedPercent: 32, resetsAt: now.addingTimeInterval(2 * 3600 + 24 * 60)),
                     QuotaWindow(id: "codex.secondary", title: "Weekly", usedPercent: 57, resetsAt: now.addingTimeInterval(3 * 86400))
@@ -206,14 +204,7 @@ final class AppModel: ObservableObject {
         switch provider {
         case .codex: address = "https://chatgpt.com/codex/settings/usage"
         case .claude: address = "https://claude.ai/settings/usage"
-        case .trae, .doubao:
-            let bundle = provider == .trae ? "cn.trae.solo.app" : "com.work.pc.doubao"
-            if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) {
-                NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
-                return
-            }
-            address = provider == .trae ? "https://www.trae.cn/" : "https://www.doubao.com/work/"
-        case .manual: return
+        case .manual, .trae, .doubao: return
         }
         if let url = URL(string: address) { NSWorkspace.shared.open(url) }
     }
@@ -243,7 +234,7 @@ final class AppModel: ObservableObject {
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tag = json["tag_name"] as? String else { throw MeterFailure.invalidResponse("update") }
-            let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+            let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
             if MeterPolicy.isNewerVersion(tag, than: current) {
                 updateMessage = text("发现 \(tag)，已打开官方发布页。下载后退出并替换 App 即可更新。", "\(tag) is available. Download it from the release page, quit AgentMeter, and replace the app.")
                 NSWorkspace.shared.open(URL(string: "https://github.com/NginxL/AgentMeter/releases/latest")!)
@@ -270,7 +261,6 @@ final class AppModel: ObservableObject {
         switch failure {
         case .notInstalled(let name): return "Install \(name) CLI first, then sign in with your subscription."
         case .notSignedIn(let name): return "Sign in to your subscription in the official \(name) client."
-        case .unsupportedAccount(let name): return "Automatic \(name) usage currently supports personal accounts only. Use manual tracking for this account type."
         case .expired(let name): return "Your \(name) login has expired. Sign in again through the official client."
         case .timedOut: return "The request timed out. Try again later."
         case .rateLimited: return "The provider is rate-limiting requests. Try again later."

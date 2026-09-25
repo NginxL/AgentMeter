@@ -13,9 +13,7 @@ enum MeterStyle {
         switch provider {
         case .codex: return accent
         case .claude: return Color(red: 0.75, green: 0.43, blue: 0.31)
-        case .trae: return Color(red: 0.39, green: 0.36, blue: 0.73)
-        case .doubao: return Color(red: 0.20, green: 0.50, blue: 0.75)
-        case .manual: return Color(red: 0.39, green: 0.42, blue: 0.68)
+        default: return Color(red: 0.39, green: 0.42, blue: 0.68)
         }
     }
 }
@@ -53,9 +51,7 @@ struct ProviderMark: View {
         switch provider {
         case .codex: return "terminal"
         case .claude: return "sun.max"
-        case .trae: return "curlybraces"
-        case .doubao: return "bubble.left.and.bubble.right"
-        case .manual: return "square.stack.3d.up"
+        default: return "square.stack.3d.up"
         }
     }
 }
@@ -126,13 +122,10 @@ func quotaTitle(_ window: QuotaWindow, model: AppModel) -> String {
     if title == "weekly" || title == "week" || title == "每周额度" || title == "周额度" || title == "7-day" || title == "7 天" || title == "7天" { return model.text("每周额度", "Weekly limit") }
     if title == "session" || title == "当前会话" { return model.text("当前会话", "Current session") }
     if title == "current period" || title == "当前时段" { return model.text("当前时段", "Current period") }
-    if title == "credits" || title == "积分" { return model.text("积分", "Credits") }
     if title == "主要窗口" { return model.text("主要窗口", "Primary limit") }
     if title == "次要窗口" { return model.text("次要窗口", "Secondary limit") }
     if model.language == "en" {
         return window.title
-            .replacingOccurrences(of: "积分包", with: "Credit pack")
-            .replacingOccurrences(of: "无限额", with: "Unlimited")
             .replacingOccurrences(of: "小时", with: "hours")
             .replacingOccurrences(of: "分钟", with: "minutes")
             .replacingOccurrences(of: "天", with: "days")

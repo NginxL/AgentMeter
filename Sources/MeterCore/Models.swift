@@ -1,10 +1,14 @@
 import Foundation
 
-public enum ProviderKind: String, Codable, CaseIterable, Sendable {
-    case codex, claude, trae, doubao, manual
-    public var supportsAutomaticUsage: Bool { self == .codex || self == .claude || self == .trae }
+public enum ProviderKind: String, Codable, Sendable {
+    case codex, claude, manual
+    // Decode-only compatibility for persisted entries removed by AppModel's migration.
+    case trae, doubao
+    public static let selectableCases: [ProviderKind] = [.codex, .claude, .manual]
+    public var isRetired: Bool { self == .trae || self == .doubao }
+    public var supportsAutomaticUsage: Bool { self == .codex || self == .claude }
     public var name: String {
-        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .trae: return "TRAE SOLO CN"; case .doubao: return "Doubao Work"; case .manual: return "Custom" }
+        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .manual, .trae, .doubao: return "Custom" }
     }
 }
 
@@ -65,17 +69,16 @@ public struct Subscription: Codable, Identifiable, Equatable, Sendable {
         self.manualTracking = manualTracking; self.manualUsage = manualUsage
     }
     public static var defaults: [Subscription] {
-        [Subscription(provider: .codex, name: "Codex"), Subscription(provider: .claude, name: "Claude"), Subscription(provider: .trae, name: "TRAE SOLO CN", currency: "CNY"), Subscription(provider: .doubao, name: "豆包工作", currency: "CNY")]
+        [Subscription(provider: .codex, name: "Codex"), Subscription(provider: .claude, name: "Claude")]
     }
 }
 
 public enum MeterFailure: Error, LocalizedError, Sendable {
-    case notInstalled(String), notSignedIn(String), expired(String), unsupportedAccount(String), unavailable(String), invalidResponse(String), timedOut, rateLimited
+    case notInstalled(String), notSignedIn(String), expired(String), unavailable(String), invalidResponse(String), timedOut, rateLimited
     public var errorDescription: String? {
         switch self {
         case .notInstalled(let name): return "\(name) CLI 未安装，或未找到可执行文件。"
         case .notSignedIn(let name): return "请先在 \(name) 官方客户端登录订阅账号。"
-        case .unsupportedAccount(let name): return "\(name) 自动读取目前仅支持个人账号；当前账号类型请使用手动额度。"
         case .expired(let name): return "\(name) 登录已过期，请在官方客户端重新登录。"
         case .unavailable(let message), .invalidResponse(let message): return message
         case .timedOut: return "读取超时，稍后可重试。"

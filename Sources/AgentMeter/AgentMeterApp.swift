@@ -21,8 +21,7 @@ enum AgentMeterMain {
                     switch kind {
                     case "codex": provider = CodexProvider()
                     case "claude": provider = ClaudeProvider()
-                    case "trae": provider = TraeProvider()
-                    default: print("Supported probes: codex, claude, trae"); exit(2)
+                    default: print("Supported probes: codex, claude"); exit(2)
                     }
                     var snapshot = try await provider.fetch()
                     snapshot.accountID = nil
@@ -64,7 +63,7 @@ enum AgentMeterMain {
                 try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
                 for language in ["en", "zh"] {
                 model.language = language
-                for (tab, height) in [("overview", 1160.0), ("subscriptions", 760.0), ("settings", 1230.0)] {
+                for (tab, height) in [("overview", 1160.0), ("subscriptions", 760.0), ("settings", 1020.0)] {
                     let filename = tab + (language == "zh" ? "-zh" : "")
                     window.setContentSize(NSSize(width: 1100, height: height))
                     model.selectedTab = tab
@@ -75,12 +74,46 @@ enum AgentMeterMain {
                     guard let png = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
                     try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(filename).png"))
                 }
+                let menuFilename = language == "zh" ? "menu-zh.png" : "menu.png"
+                try await renderMenuScreenshot(model: model, to: URL(fileURLWithPath: directory).appendingPathComponent(menuFilename))
                 }
                 print("Rendered native demo screenshots to \(directory)")
                 application.terminate(nil)
             } catch { print("Screenshot rendering failed: \(error.localizedDescription)"); exit(1) }
         }
         application.run()
+    }
+
+    @MainActor
+    private static func renderMenuScreenshot(model: AppModel, to destination: URL) async throws {
+        let originalSubscriptions = model.subscriptions
+        model.subscriptions = originalSubscriptions.filter { $0.provider == .codex || $0.provider == .claude }
+        defer { model.subscriptions = originalSubscriptions }
+        let host = NSHostingView(rootView: MenuPanelView(model: model))
+        let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: 100, y: 100), size: host.fittingSize),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        window.orderFront(nil)
+        defer { window.orderOut(nil) }
+
+        // Size only from SwiftUI's intrinsic layout. A fixed outer height would conceal
+        // the menu regression where its scroll area collapsed to zero height.
+        for _ in 0..<2 {
+            try await Task.sleep(nanoseconds: 350_000_000)
+            host.layoutSubtreeIfNeeded()
+            window.setContentSize(host.fittingSize)
+        }
+        host.layoutSubtreeIfNeeded()
+        let naturalHeight = host.fittingSize.height
+        guard naturalHeight.isFinite, naturalHeight > 250, naturalHeight <= 650 else {
+            throw NSError(domain: "AgentMeter.MenuLayout", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Menu panel natural height was \(naturalHeight); expected more than 250 and at most 650 points."])
+        }
+        guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { throw CocoaError(.coderInvalidValue) }
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        guard let png = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
+        try png.write(to: destination)
+        print("Menu layout check passed: \(Int(host.fittingSize.width)) × \(Int(naturalHeight)) points (\(model.language))")
     }
 }
 

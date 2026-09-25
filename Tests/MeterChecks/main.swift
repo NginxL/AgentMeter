@@ -14,6 +14,10 @@ func rejects(_ text: String, parser: (Data) throws -> UsageSnapshot, _ message: 
 }
 
 do {
+    expect(ProviderKind.selectableCases == [.codex, .claude, .manual], "Only supported providers can be selected")
+    expect(Subscription.defaults.map(\.provider) == [.codex, .claude], "Default subscriptions contain only Codex and Claude")
+    let legacyKinds = try JSONDecoder().decode([ProviderKind].self, from: payload(#"["trae","doubao"]"#))
+    expect(legacyKinds.allSatisfy { $0.isRetired && !$0.supportsAutomaticUsage }, "Legacy provider values decode for migration and cannot make automatic requests")
     let codex = try QuotaParsers.codex(data: payload(#"{"rateLimits":{"primary":{"usedPercent":21,"windowDurationMins":300,"resetsAt":1800000000},"secondary":{"usedPercent":43,"windowDurationMins":10080,"resetsAt":1800500000},"planType":"plus"}}"#))
     expect(codex.windows.count == 2, "Codex parses both quota windows")
     expect(codex.windows.first?.remainingPercent == 79, "Used and remaining percentages are not confused")

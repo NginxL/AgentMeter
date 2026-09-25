@@ -30,13 +30,10 @@ struct SettingsContent: View {
             MeterCard {
                 VStack(alignment: .leading, spacing: 20) {
                     sectionTitle(model.text("账号连接", "Account connections"), icon: "link")
-                    connectionRow(.codex)
-                    Divider()
-                    connectionRow(.claude)
-                    Divider()
-                    connectionRow(.trae)
-                    Divider()
-                    connectionRow(.doubao)
+                    ForEach(Array(ProviderKind.selectableCases.filter(\.supportsAutomaticUsage).enumerated()), id: \.element) { index, provider in
+                        if index > 0 { Divider() }
+                        connectionRow(provider)
+                    }
                     Text(model.text("支持自动读取的服务每家使用一个本机登录。所有工具均可手动记录额度，记录时间与自动刷新时间分别显示。", "Automatic providers use one local login each. Every tool supports manual usage records with their own recording time."))
                         .font(.system(size: 11)).foregroundStyle(MeterStyle.secondary).lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -77,7 +74,7 @@ struct SettingsContent: View {
         }
     }
 
-    private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0" }
+    private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1" }
 
     private func sectionTitle(_ title: String, icon: String) -> some View {
         Label(title, systemImage: icon).font(.system(size: 14, weight: .semibold))
@@ -111,7 +108,7 @@ struct SettingsContent: View {
                 .help(model.text("需要启用 Claude 订阅。允许读取本机已有登录，不会更改服务商凭据。", "Requires an enabled Claude subscription. Reads your existing local login without changing provider credentials."))
             } else {
                 Button { model.openDashboard(provider) } label: {
-                        Label(provider == .doubao || provider == .trae ? model.text("打开客户端", "Open client") : model.text("官方用量", "Usage page"), systemImage: "arrow.up.right")
+                        Label(model.text("官方用量", "Usage page"), systemImage: "arrow.up.right")
                 }.buttonStyle(MeterButtonStyle())
             }
         }
@@ -123,11 +120,7 @@ struct SettingsContent: View {
             return model.text("使用 Codex CLI 的现有订阅登录读取额度。", "Reads usage through your existing Codex CLI subscription login.")
         case .claude:
             return model.text("连接时允许读取 Claude 的本机登录凭据。", "Connect to allow access to Claude’s existing local login.")
-        case .trae:
-            return model.text("实验性读取 TRAE SOLO CN 个人额度；企业额度可手动记录。", "Experimental TRAE SOLO CN personal usage. Track enterprise quotas manually.")
-        case .doubao:
-            return model.text("手动记录额度。请在客户端「设置 → 订阅与额度管理」核对。", "Manual usage tracking. Check Settings → Subscription & usage in the client.")
-        case .manual:
+        default:
             return model.text("手动记录订阅和额度。", "Manually tracked plan and usage.")
         }
     }

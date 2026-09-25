@@ -22,7 +22,7 @@
   <a href="https://github.com/NginxL/AgentMeter/issues">Report an issue</a>
 </p>
 
-AgentMeter is a native SwiftUI app for viewing Codex, Claude, and experimental TRAE SOLO CN quotas alongside manually tracked subscriptions and usage. Doubao Work has a built-in manual entry, and you can add any other tool. Supported automatic sources use existing official client logins; your records stay on your Mac.
+AgentMeter is a native SwiftUI app for viewing Codex and Claude quotas alongside manually tracked subscriptions and usage. Check each subscription's remaining quota, reset time, and read status from the menu bar, or open the dashboard to manage your records. Supported automatic sources use existing official client logins; your records stay on your Mac.
 
 **Compatibility:** macOS 14 or later · Apple Silicon and Intel in one universal app · Simplified Chinese by default, switchable to English · no third-party runtime dependencies.
 
@@ -40,6 +40,10 @@ AgentMeter is a native SwiftUI app for viewing Codex, Claude, and experimental T
   </tr>
 </table>
 
+<p align="center"><strong>Menu bar at a glance</strong></p>
+<p align="center"><a href="docs/images/menu.png"><img src="docs/images/menu.png" width="360" alt="AgentMeter menu bar panel with per-subscription remaining quota, reset times, and data status using sample data" /></a></p>
+<p align="center">A compact summary for each enabled subscription, with quota readings, reset times, and clear manual, stale, or unavailable states. Open the dashboard for details.</p>
+
 <p align="center"><sub>Actual app screenshots using labeled sample data. Plans, amounts, dates, and quota values are illustrative; they do not represent current provider offers or a live account. Click to view full size.</sub></p>
 
 ## What AgentMeter tracks
@@ -48,15 +52,11 @@ AgentMeter is a native SwiftUI app for viewing Codex, Claude, and experimental T
 | --- | --- | --- |
 | Codex | Quota windows, reset times, and available plan information through the official local Codex client | Subscription details; optional manual quota fallback |
 | Claude | Quota windows and reset times from Anthropic's usage endpoint; available plan label from the existing Claude Code login | Subscription details; optional manual quota fallback |
-| TRAE SOLO CN | **Experimental:** credit-pack percentages for personal accounts (`marscode` scope), using the existing local client login | Subscription details; manual quota fallback for unsupported accounts or unavailable data |
-| Doubao Work | No automatic quota access in v1 | Built-in subscription entry and up to two manual quota windows |
 | Any other tool | No automatic quota integration in v1 | Custom subscription entry and up to two manual quota windows |
 
-Manual subscription fields include name, plan, renewal or expiry date, monthly amount, currency, and notes. Manual quota windows record used percentage and an optional reset time; unknown values can remain blank. The recorded-at timestamp updates when you save changes to the quota record. These readings are labeled as manual and do not refresh or reset themselves. You can switch Codex, Claude, or TRAE to manual tracking explicitly; an automatic read failure does not silently switch the source.
+Manual subscription fields include name, plan, renewal or expiry date, monthly amount, currency, and notes. Manual quota windows record used percentage and an optional reset time; unknown values can remain blank. The recorded-at timestamp updates when you save changes to the quota record. These readings are labeled as manual and do not refresh or reset themselves. You can switch Codex or Claude to manual tracking explicitly; an automatic read failure does not silently switch the source.
 
 **All subscription dates are manual in v1.** Automatic quota reset times come from the supported source; manual quota reset times are entered by you. Neither is a billing date. AgentMeter does not scrape billing pages, infer subscription expiry from a quota reset, or convert token usage into an estimated API cost. Monthly totals add the amounts you enter and keep currencies separate; they are not provider invoices.
-
-TRAE compatibility targets the local TRAE SOLO CN 0.1.63 credential format and an internal usage endpoint. Enterprise, organization, `bytedance`, `saas`, and unknown account scopes are unsupported. It does not use TRAE Enterprise OpenAPI or treat credit-pack expiry as a reset or renewal date. This integration may need updates when the official client changes.
 
 Quota availability depends on your login, plan, and the provider's current response. Unknown values remain unavailable. An integration is not a guarantee that every account or quota window is supported.
 
@@ -64,16 +64,16 @@ Quota availability depends on your login, plan, and the provider's current respo
 
 1. Download `AgentMeter-<version>-universal.zip` from the [latest release](https://github.com/NginxL/AgentMeter/releases/latest).
 2. Unzip it and move `AgentMeter.app` into `/Applications` or `~/Applications`.
-3. For automatic quotas, sign in through the official Codex, Claude Code, or supported personal TRAE SOLO CN client, then refresh the overview.
-4. Edit subscription dates and monthly amounts. For Doubao Work or manual tracking, enter the quota readings you want to record; add a custom entry for any other tool.
+3. For automatic quotas, sign in through the official Codex or Claude Code client, then refresh the overview.
+4. Edit subscription dates and monthly amounts. For manual tracking, enter the quota readings you want to record; add a custom entry for any other tool.
 
 Codex requires a local `codex` executable. Claude uses the existing Claude Code credential file or its default macOS Keychain entry. If Keychain access needs approval, use AgentMeter's explicit Claude connection action; background refresh does not open a Keychain prompt. AgentMeter does not ask you to paste an API key or password.
-
-TRAE reads only the existing local TRAE SOLO CN login record for a supported personal account. Doubao Work does not read login data; its action opens the official app, or the official website when the app is unavailable, so you can check and record usage yourself.
 
 > **Signing:** Current release builds are ad-hoc signed. They are not Apple Developer ID signed or notarized, so macOS may block a downloaded copy. You can [build from source](docs/DEVELOPMENT.md#local-build) locally. The build and installation instructions do not disable Gatekeeper.
 
 ## Everyday use
+
+Click the AgentMeter menu bar icon to see each enabled subscription's remaining quota, reset time, and current read status. Manual readings retain their source label and recording time; stale or unavailable data stays visibly distinct. Open the dashboard to edit records or inspect details.
 
 | Action or state | Behavior |
 | --- | --- |
@@ -95,7 +95,7 @@ Checks are manual. Version 1 does not download, overwrite, or relaunch the appli
 
 AgentMeter has no account system, analytics service, or project backend. Subscription records and a sanitized quota cache are stored locally. Credentials are read only as needed for provider access and are never saved in AgentMeter settings, exported, or sent to GitHub.
 
-Codex requests run through the official CLI, which controls its own authentication and network behavior. Claude usage requests go directly to Anthropic; supported personal TRAE usage requests go only to the fixed `api.trae.cn` endpoint. Manual entries, including Doubao Work, do not read credentials or send quota requests. Manual update checks go to GitHub. Read the [privacy and data-source guide](docs/PRIVACY.md) for credential sources, storage, and network boundaries.
+Codex requests run through the official CLI, which controls its own authentication and network behavior. Claude usage requests go directly to Anthropic. Manual entries do not read credentials or send quota requests. Manual update checks go to GitHub. Read the [privacy and data-source guide](docs/PRIVACY.md) for credential sources, storage, and network boundaries.
 
 ## Development and contributing
 

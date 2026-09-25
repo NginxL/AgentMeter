@@ -10,7 +10,6 @@ let package = Package(
         .target(name: "MeterProviders", dependencies: ["MeterCore"]),
         .executableTarget(name: "AgentMeter", dependencies: ["MeterCore", "MeterProviders"]),
         .executableTarget(name: "MeterChecks", dependencies: ["MeterCore"], path: "Tests/MeterChecks"),
-        .executableTarget(name: "MeterProviderChecks", dependencies: ["MeterCore", "MeterProviders"], path: "Tests/ProviderChecks"),
-        .executableTarget(name: "MeterTraeChecks", dependencies: ["MeterCore", "MeterProviders"], path: "Tests/TraeChecks")
+        .executableTarget(name: "MeterProviderChecks", dependencies: ["MeterCore", "MeterProviders"], path: "Tests/ProviderChecks")
     ]
 )

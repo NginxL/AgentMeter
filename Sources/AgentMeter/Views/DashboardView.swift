@@ -73,7 +73,7 @@ struct DashboardView: View {
                     languageButton("zh", title: "中文")
                     languageButton("en", title: "EN")
                     Spacer()
-                    Text("v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"))
+                    Text("v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"))
                         .font(.system(size: 9)).foregroundStyle(MeterStyle.secondary)
                 }
                 .padding(.top, 8)
@@ -300,7 +300,6 @@ struct QuotaCard: View {
                         HStack(spacing: 5) {
                             MeterPill(text: plan, color: color)
                             if subscription.usesManualUsage { MeterPill(text: model.text("手动记录", "Manual")) }
-                            else if subscription.provider == .trae { MeterPill(text: model.text("实验性", "Experimental"), color: MeterStyle.amber) }
                         }
                     }
                     Spacer()
@@ -377,9 +376,7 @@ struct QuotaCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label(model.text("从官方页面记录额度", "Record usage from the provider"), systemImage: "pencil.line")
                 .font(.system(size: 13, weight: .semibold))
-            Text(subscription.provider == .doubao
-                 ? model.text("豆包工作当前采用手动记录。可在官方客户端查看额度后，记录已用比例和重置时间。", "Doubao Work uses manual tracking in this version. Check the official client, then record usage and reset times here.")
-                 : model.text("手动额度不会自动更新。记录已用比例及重置时间，便于与其他工具一起查看。", "Manual records do not update automatically. Add the used percentage and reset time to see usage alongside your other tools."))
+            Text(model.text("手动额度不会自动更新。记录已用比例及重置时间，便于与其他工具一起查看。", "Manual records do not update automatically. Add the used percentage and reset time to see usage alongside your other tools."))
                 .font(.system(size: 11)).foregroundStyle(MeterStyle.secondary).lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
             Text(model.text("尚未记录", "Not recorded"))
