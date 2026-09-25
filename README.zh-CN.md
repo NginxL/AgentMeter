@@ -71,6 +71,16 @@ Codex 需要本地可用的 `codex` 可执行文件。Claude 使用 Claude Code 
 
 > **签名状态：** 当前发行版采用临时签名（ad-hoc），未使用 Apple Developer ID 签名，也未公证。macOS 可能阻止打开下载的副本；你可以在本地[从源码构建](docs/DEVELOPMENT.zh-CN.md#本地构建)。构建脚本和安装说明不会关闭 Gatekeeper。
 
+### Claude 无法读取时
+
+登录 Claude Desktop 或 claude.ai 网页，不代表本机 Claude Code CLI 已登录。AgentMeter 读取的是 **Claude Code 的订阅登录凭据**。
+
+1. 在终端运行 `claude auth status --text`，检查登录状态。
+2. 如果尚未使用 Claude 订阅账号登录，运行 `claude auth login --claudeai`，并在浏览器中完成官方登录流程。
+3. 在 AgentMeter 中启用 Claude 自动读取，打开**设置 → 账号连接 → 授权读取 Claude**。如果 macOS 弹出提示，允许 AgentMeter 读取该钥匙串条目，然后返回总览刷新。
+
+AgentMeter 的连接按钮仅授权读取已有的本机登录，不会替你登录 Claude Code。详见[官方认证说明](https://code.claude.com/docs/en/authentication)。
+
 ## 日常使用
 
 点击 AgentMeter 菜单栏图标，即可查看每个已启用订阅的剩余额度、重置时间和当前读取状态。手动读数保留来源与记录时间，过期或不可用数据单独标记。编辑记录或查看详情时可打开工作台。

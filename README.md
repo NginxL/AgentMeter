@@ -71,6 +71,16 @@ Codex requires a local `codex` executable. Claude uses the existing Claude Code 
 
 > **Signing:** Current release builds are ad-hoc signed. They are not Apple Developer ID signed or notarized, so macOS may block a downloaded copy. You can [build from source](docs/DEVELOPMENT.md#local-build) locally. The build and installation instructions do not disable Gatekeeper.
 
+### Claude troubleshooting
+
+Being signed in to Claude Desktop or claude.ai does not mean the local Claude Code CLI is signed in. AgentMeter reads the **Claude Code subscription login**.
+
+1. Check it in Terminal with `claude auth status --text`.
+2. If it is not signed in with your Claude subscription, run `claude auth login --claudeai` and complete the official browser sign-in.
+3. With Claude enabled for automatic usage in AgentMeter, open **Settings → Account connections → Connect Claude**. If macOS asks, allow AgentMeter to access the Keychain item, then return to the overview and refresh.
+
+AgentMeter's connection button authorizes access to an existing local login; it does not sign you in to Claude Code. See the [official authentication guide](https://code.claude.com/docs/en/authentication).
+
 ## Everyday use
 
 Click the AgentMeter menu bar icon to see each enabled subscription's remaining quota, reset time, and current read status. Manual readings retain their source label and recording time; stale or unavailable data stays visibly distinct. Open the dashboard to edit records or inspect details.
