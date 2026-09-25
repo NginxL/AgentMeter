@@ -33,8 +33,10 @@ func runFakeAppServer() throws {
         } else if mode == "malformed" {
             result = ["rateLimits": ["primary": NSNull()]]
         } else if mode == "huge" {
-            print(String(repeating: "x", count: 1_100_000))
-            fflush(stdout)
+            // This tests size validation, independently of the timeout fixture's short deadline.
+            // A delayed, unterminated frame must still hit the unchanged 1 MiB size guard.
+            Thread.sleep(forTimeInterval: 1.2)
+            try FileHandle.standardOutput.write(contentsOf: Data(repeating: 0x78, count: 1_100_000))
             Thread.sleep(forTimeInterval: 20)
             continue
         } else {
@@ -61,6 +63,19 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     if !condition() { throw CheckFailure(description: message) }
 }
 
+func failureKind(_ error: Error) -> String {
+    guard let failure = error as? MeterFailure else { return String(describing: type(of: error)) }
+    switch failure {
+    case .invalidResponse: return "invalidResponse"
+    case .timedOut: return "timedOut"
+    case .unavailable: return "unavailable"
+    case .notSignedIn: return "notSignedIn"
+    case .expired: return "expired"
+    case .rateLimited: return "rateLimited"
+    default: return "other MeterFailure"
+    }
+}
+
 func runProviderChecks() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("AgentMeter-ProviderChecks-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -75,7 +90,10 @@ func runProviderChecks() async throws {
                            "AGENTMETER_CHECK_PID": pidFile.path,
                            "AGENTMETER_CHECK_REQUESTS": requestsFile.path,
                            "PATH": "/usr/bin:/bin"]
-        let provider = CodexProvider(timeout: mode == "cancel" ? 20 : 1, executableURL: executable, environment: environment)
+        // Slow CI runners must reach the parser/size guard before its result is classified.
+        // Keep the dedicated deadline and cancellation checks strict and independent.
+        let timeout: TimeInterval = mode == "timeout" ? 1 : mode == "cancel" ? 20 : 10
+        let provider = CodexProvider(timeout: timeout, executableURL: executable, environment: environment)
         let started = Date()
         let task = Task { try await provider.fetch() }
         if mode == "cancel" { try await Task.sleep(nanoseconds: 150_000_000); task.cancel() }
@@ -84,7 +102,8 @@ func runProviderChecks() async throws {
         catch { outcome = .failure(error) }
 
         let duration = Date().timeIntervalSince(started)
-        try require(duration < 4, "\(mode): provider did not return promptly")
+        let maximumDuration: TimeInterval = mode == "timeout" || mode == "cancel" ? 4 : 12
+        try require(duration < maximumDuration, "\(mode): provider did not return promptly")
         let pidText = try String(contentsOf: pidFile, encoding: .utf8)
         guard let pid = Int32(pidText) else { throw CheckFailure(description: "\(mode): fake CLI never started") }
         try await Task.sleep(nanoseconds: 150_000_000)
@@ -104,7 +123,10 @@ func runProviderChecks() async throws {
             case "rpc-error": guard case MeterFailure.expired = error else { throw CheckFailure(description: "Wrong expired classification") }
             case "timeout": guard case MeterFailure.timedOut = error else { throw CheckFailure(description: "Wrong timeout classification") }
             case "cancel": try require(error is CancellationError, "Cancellation must remain cancellation")
-            case "malformed", "huge": guard case MeterFailure.invalidResponse = error else { throw CheckFailure(description: "Wrong malformed-data classification") }
+            case "malformed", "huge":
+                guard case MeterFailure.invalidResponse = error else {
+                    throw CheckFailure(description: "\(mode): expected invalidResponse, received \(failureKind(error))")
+                }
             default: break
             }
         }
