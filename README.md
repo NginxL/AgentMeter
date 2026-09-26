@@ -120,8 +120,6 @@ The generated app is `dist/AgentMeter.app`. Building requires macOS 14+ and Appl
 
 Issues and pull requests are welcome. Include the app version, macOS version, provider, and steps to reproduce. Remove account details and credentials from screenshots or logs. Keep English and Chinese documentation consistent.
 
-## Acknowledgments and license
+## License
 
-Inspired by [CodexBar](https://github.com/steipete/CodexBar). AgentMeter's code, interface, and icon are independently authored; see [NOTICE.md](NOTICE.md). The project is not affiliated with any supported service provider.
-
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). AgentMeter is not affiliated with any supported service provider.

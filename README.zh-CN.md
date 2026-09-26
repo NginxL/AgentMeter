@@ -120,8 +120,6 @@ bash scripts/build.sh
 
 欢迎提交 Issue 和 Pull Request。反馈时请附应用版本、macOS 版本、涉及的服务商和复现步骤，并删除截图、日志中的账号信息与凭据。文档修改请保持中英文内容一致。
 
-## 致谢与许可证
+## 许可证
 
-灵感来自 [CodexBar](https://github.com/steipete/CodexBar)。AgentMeter 的代码、界面和图标独立编写，详见 [NOTICE.md](NOTICE.md)。本项目与所支持服务的提供方没有隶属关系。
-
-采用 [MIT 许可证](LICENSE)。
+采用 [MIT 许可证](LICENSE)。AgentMeter 与所支持服务的提供方没有隶属关系。
